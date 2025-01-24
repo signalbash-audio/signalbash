@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='utf8'?>
+<installer-gui-script minSpecVersion="2">
+    <title>Signalbash</title>
+    <os-version min="10.11" />
+    <license file="LICENSE" />
+    <background file="background.png" mime-type="image/png" scaling="tofit" alignment="bottomleft"/>
+    <background-darkAqua file="background.png" mime-type="image/png" scaling="tofit" alignment="bottomleft"/>
+    <options customize="always" rootVolumeOnly="true" hostArchitectures="x86_64,arm64" />
+    <domain enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true" />
+
+    <choices-outline>
+        <line choice="vst3" />
+        <line choice="au" />
+        <line choice="clap" />
+    </choices-outline>
+
+    <choice id="vst3" visible="true" start_selected="true" title="Signalbash VST3">
+        <pkg-ref id="com.signalbash.signalbash.vst3.pkg" version="1.0.0" onConclusion="none">signalbash.vst3.pkg</pkg-ref>
+    </choice>
+
+    <choice id="au" visible="true" start_selected="true" title="Signalbash AU">
+        <pkg-ref id="com.signalbash.signalbash.au.pkg" version="1.0.0" onConclusion="none">signalbash.au.pkg</pkg-ref>
+    </choice>
+
+    <choice id="clap" visible="true" start_selected="true" title="Signalbash CLAP">
+        <pkg-ref id="com.signalbash.signalbash.clap.pkg" version="1.0.0" onConclusion="none">signalbash.clap.pkg</pkg-ref>
+    </choice>
+</installer-gui-script>
