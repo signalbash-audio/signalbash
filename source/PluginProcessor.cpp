@@ -385,6 +385,7 @@ void SignalbashAudioProcessor::checkConnectionHealth ()
                 DBG("No internet detected.");
             }
             else if (response.result.getErrorMessage() == "Server is offline or unreachable") {
+                connectionHealthy = false;
                 DBG("Server is temporarily offline or unreachable");
             }
 
@@ -489,7 +490,8 @@ void SignalbashAudioProcessor::commitActivity (bool immediateSubmit = false)
             else if (response.status == 0) {
                 DBG("Internet connection down or Server Offline");
                 connectionHealthy = false;
-                checkConnectionHealth();
+                juce::Thread::sleep(currAttempt * currAttempt * 1000);
+                currAttempt += 1;
             }
             else {
                 DBG(response.bodyAsString);
@@ -501,6 +503,7 @@ void SignalbashAudioProcessor::commitActivity (bool immediateSubmit = false)
             }
         }
 
+        checkConnectionHealth();
         DBG("Request Attempt Exhaustion.");
     };
 
