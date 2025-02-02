@@ -1,7 +1,9 @@
 <?xml version='1.0' encoding='utf8'?>
 <installer-gui-script minSpecVersion="2">
     <title>Signalbash</title>
-    <os-version min="10.11" />
+    <allowed-os-versions>
+        <os-version min="10.11" />
+    </allowed-os-versions>
     <license file="LICENSE" />
     <background file="background.png" mime-type="image/png" scaling="tofit" alignment="bottomleft"/>
     <background-darkAqua file="background.png" mime-type="image/png" scaling="tofit" alignment="bottomleft"/>
