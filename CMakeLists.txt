@@ -40,9 +40,11 @@ juce_add_plugin(Signalbash
     PLUGIN_MANUFACTURER_CODE SIGB               # A four-character manufacturer id with at least one upper-case character
     PLUGIN_CODE Sigb                            # A unique four-character plugin id with exactly one upper-case character
                                                 # GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case
-    FORMATS AAX AU VST3 Standalone                  # The formats to build. Other valid formats are: AAX Unity VST AU AUv3
+    FORMATS AAX AU VST3 Standalone              # The formats to build. Other valid formats are: AAX Unity VST AU AUv3
     PRODUCT_NAME "Signalbash"                   # The name of the final executable, which can differ from the target name
     AAX_CATEGORY AAX_ePlugInCategory_None       # AAX Category
+    VST3_CATEGORIES Fx Tools                    # VST3 Categories, not all hosts use this, but required to appear in some
+    VST2_CATEGORY kPlugCategUnknown             # Not relevant b/c we don't have access to this sdk, but maybe for others
 )
 
 clap_juce_extensions_plugin(TARGET Signalbash
