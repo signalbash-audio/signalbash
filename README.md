@@ -12,17 +12,18 @@ On macOS, the installer will install the following plugin formats:
 
 - VST3
 - CLAP
+- AAX
 - AU (Audio Unit)
 
 On Windows, the installer will install the following plugin formats:
 
 - VST3
 - CLAP
+- AAX
 
 
 #### Planned Future Compatibility
 
-- AAX for both macOS & Windows
 - Windows ARM64
 - Linux
 
