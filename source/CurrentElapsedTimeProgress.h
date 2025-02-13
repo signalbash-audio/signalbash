@@ -20,7 +20,7 @@ public:
 
         nowTimeStamp = juce::Time::currentTimeMillis() * oneThouInvert;
 
-        std::lldiv_t divmod = std::div(nowTimeStamp, _totalDurationSeconds64);
+        std::lldiv_t divmod = std::lldiv(nowTimeStamp, _totalDurationSeconds64);
 
         progress = 100.0 * ( static_cast<double>(divmod.rem) * totalDurationSecondsInvert);
 
