@@ -9,7 +9,7 @@ been working in your DAW.
 
 Signalbash consists of two components: The Signalbash Plugin & The Signalbash Web App. 
 
-This repository hosts the source code free and open source Signalbash Plugin.
+This repository hosts the source code for the free and open source Signalbash Plugin.
 
 ## 🔗 Signalbash Links
 
