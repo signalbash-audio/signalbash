@@ -1,25 +1,51 @@
+
+
+![Signalbash Plugin Repository Banner](docs/signalbash_plugin_banner_1500x500.jpg)
+
 # Signalbash
 
-This repository hosts the source for the Signalbash Plugin.
+Signalbash is a free time-tracking application that allows you to see how long you've
+been working in your DAW.
+
+Signalbash consists of two components: The Signalbash Plugin & The Signalbash Web App. 
+
+This repository hosts the source code free and open source Signalbash Plugin.
+
+## 🔗 Signalbash Links
+
+- 🌐 [Website: signalbash.com](https://signalbash.com)
+- 🔌 [Signalbash Plugin Home](https://signalbash.com/plugin-download)
+- 📜 [Signalbash Documentation](https://info.signalbash.com)
 
 
-## Platform Compatibility
+## 💿 Installation
+
+If you're an artist looking to install the plugin, the recommended & easiest way
+is by downloading and running the installer provided on signalbash.com,
+available at the following link:
+
+- [Install Plugin](https://signalbash.com/plugin-download)
+
+
+## 🖥️ Platform Compatibility
 
 Signed installers for macOS (Universal) & Windows (x64 only) are currently available
-on the Releases tab.
+on signalbash.com and on this repo's Releases tab.
 
-On macOS, the installer will install the following plugin formats:
-
-- VST3
-- CLAP
-- AAX
-- AU (Audio Unit)
-
-On Windows, the installer will install the following plugin formats:
+On macOS, the installer can install the following plugin formats:
 
 - VST3
 - CLAP
 - AAX
+- AU
+
+On Windows, the installer can install the following plugin formats:
+
+- VST3
+- CLAP
+- AAX
+
+For more info, see the [Signalbash Plugin Page](https://signalbash.com/plugin-download)
 
 
 #### Planned Future Compatibility
