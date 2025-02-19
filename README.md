@@ -32,6 +32,9 @@ available at the following link:
 Signed installers for macOS (Universal) & Windows (x64 only) are currently available
 on signalbash.com and on this repo's Releases tab.
 
+Additionally, plugins compatible with Linux (both x64 & ARM64) can
+be downloaded from either of the same locations.
+
 On macOS, the installer can install the following plugin formats:
 
 - VST3
@@ -45,13 +48,19 @@ On Windows, the installer can install the following plugin formats:
 - CLAP
 - AAX
 
+On Linux, the Plugin can be installed by unzipping the provided zip file, which
+includes the following formats:
+
+- VST3
+- CLAP
+
+
 For more info, see the [Signalbash Plugin Page](https://signalbash.com/plugin-download)
 
 
 #### Planned Future Compatibility
 
 - Windows ARM64
-- Linux
 
 
 ## License
