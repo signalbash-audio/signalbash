@@ -46,17 +46,15 @@ public:
             urlRequest = urlRequest.withPOSTData (output.toString());
         }
 
-        std::unique_ptr<juce::InputStream> input (urlRequest.createInputStream (
-            hasFields,
-            nullptr,
-            nullptr,
-            stringPairArrayToHeaderString(headers),
-            30 * 1000,
-            &response.headers,
-            &response.status,
-            5,
-            verb
-        ));
+        auto options = juce::URL::InputStreamOptions (hasFields ? juce::URL::ParameterHandling::inPostData : juce::URL::ParameterHandling::inAddress)
+           .withExtraHeaders (stringPairArrayToHeaderString(headers))
+           .withConnectionTimeoutMs (30 * 1000)
+           .withResponseHeaders (&response.headers)
+           .withStatusCode (&response.status)
+           .withNumRedirectsToFollow (5)
+           .withHttpRequestCmd (verb);
+
+        std::unique_ptr<juce::InputStream> input (urlRequest.createInputStream (options));
 
         if (!input) {
             if (response.status == 0)
