@@ -28,6 +28,8 @@ private:
     void mouseDown (const juce::MouseEvent &event) override;
     void mouseMove (const juce::MouseEvent &event) override;
 
+    void updateUIForCurrentView();
+
     bool viewSessionKeyEnter = true;
     bool viewDefault = false;
     bool viewSettings = false;

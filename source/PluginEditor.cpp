@@ -24,7 +24,7 @@ SignalbashAudioProcessorEditor::SignalbashAudioProcessorEditor (SignalbashAudioP
                                            );
 
     bgColor = juce::Colour(0xFF1D1F21);
-    buttonFillColor =juce::Colour(0xFF222426);
+    buttonFillColor = juce::Colour(0xFF222426);
 
     addAndMakeVisible(sessionKeyLabel);
     sessionKeyLabel.setText("Enter Session Key:", juce::dontSendNotification);
@@ -75,6 +75,7 @@ SignalbashAudioProcessorEditor::SignalbashAudioProcessorEditor (SignalbashAudioP
         viewSessionKeyEnter = false;
         viewDefault = true;
     }
+    updateUIForCurrentView();
 }
 
 SignalbashAudioProcessorEditor::~SignalbashAudioProcessorEditor()
@@ -89,7 +90,7 @@ void SignalbashAudioProcessorEditor::paint (juce::Graphics& g)
     g.fillAll (bgColor);
 
     g.setColour (juce::Colours::black);
-    g.fillRect(0, 0,getWidth(), 30);
+    g.fillRect(0, 0, getWidth(), 30);
 
     juce::String statusBarMessage = "Connection Active";
     if (audioProcessor.sessionKey.isEmpty()) {
@@ -136,45 +137,20 @@ void SignalbashAudioProcessorEditor::paint (juce::Graphics& g)
         juce::String promptMessage;
         if (audioProcessor.sessionKey.isEmpty()) {
             promptMessage = "Please Enter Your Session Key.";
-            editSessionKeyCancelButton.setVisible(false);
 
             g.drawFittedText("Get your session key by logging into your account at signalbash.com",
                              100, 150 + 40 + 20,
                              200, 40,
                              juce::Justification::centred, 3
                              );
-
         } else {
             promptMessage = "Enter New Session Key";
-            editSessionKeyCancelButton.setVisible(true);
         }
 
         g.drawImageWithin(splashLogoImage, 112, 40, 175, 90, juce::RectanglePlacement::xMid);
-
-        flushButton.setVisible(false);
-        animationActiveToggle.setVisible(false);
-        sessionKeyEditor.setVisible(true);
-        sessionKeyLabel.setText(promptMessage, juce::dontSendNotification);
-        sessionKeyLabel.setVisible(true);
-        submitSessionKeyButton.setVisible(true);
-        copySessionKeyButton.setVisible(false);
-        changeSessionKeyButton.setVisible(false);
-        retrySessionKeyValidateButton.setVisible(false);
-
     }
 
     if (viewSettings) {
-
-        flushButton.setVisible(true);
-        sessionKeyEditor.setVisible(false);
-        sessionKeyLabel.setVisible(false);
-        submitSessionKeyButton.setVisible(false);
-        animationActiveToggle.setVisible(true);
-        copySessionKeyButton.setVisible(true);
-        changeSessionKeyButton.setVisible(true);
-        editSessionKeyCancelButton.setVisible(false);
-        retrySessionKeyValidateButton.setVisible(false);
-
         g.setColour (juce::Colours::white);
 
         auto bounds = getLocalBounds();
@@ -202,37 +178,17 @@ void SignalbashAudioProcessorEditor::paint (juce::Graphics& g)
         g.drawFittedText ("Session Key: " + getObfuscatedSessionKey().toUpperCase(),
                           bounds.removeFromTop(20),
                           juce::Justification::centredLeft, 1);
-        auto sessKeyBounds = bounds.removeFromTop(20);
-        copySessionKeyButton.setBounds(sessKeyBounds.removeFromLeft(sessKeyBounds.getWidth() / 2));
-        changeSessionKeyButton.setBounds(sessKeyBounds);
 
         g.drawFittedText ("Animation:",
-                          bounds.removeFromTop(40),
+                          bounds.removeFromTop(90),
                           juce::Justification::centredLeft, 1);
-        animationActiveToggle.setBounds(bounds.removeFromTop(20));
 
         g.fillRect(0, 30,
                    getWidth() * audioProcessor.submissionWindowTimer.getProgress() / 100,
                    2);
-        if (settingsDebugMode) {
-            flushButton.setVisible(true);
-        } else {
-            flushButton.setVisible(false);
-        }
     }
 
     if (viewDefault) {
-
-        flushButton.setVisible(false);
-        sessionKeyEditor.setVisible(false);
-        sessionKeyLabel.setVisible(false);
-        submitSessionKeyButton.setVisible(false);
-        animationActiveToggle.setVisible(false);
-        copySessionKeyButton.setVisible(false);
-        changeSessionKeyButton.setVisible(false);
-        editSessionKeyCancelButton.setVisible(false);
-        retrySessionKeyValidateButton.setVisible(false);
-
         float centerX = getWidth() / 2.0f;
         float centerY = 30 + (getHeight() - 30) / 2.0f;
 
@@ -250,51 +206,25 @@ void SignalbashAudioProcessorEditor::paint (juce::Graphics& g)
         transform = transform.translated(centerX, centerY);
 
         g.drawImageTransformed(rotatingImage, transform, false);
-
-        if (
-            (!audioProcessor.connectionHealthy.load() && !audioProcessor.sessionKeyValidated.load()) ||
-            (!audioProcessor.currentSessionKeyInvalid.load() && !audioProcessor.sessionKeyValidated.load() && audioProcessor.sessionKey.isEmpty())
-            ) {
-            retrySessionKeyValidateButton.setVisible(true);
-        }
-        if (!audioProcessor.currentSessionKeyInvalid.load() && !audioProcessor.sessionKeyValidated.load()) {
-            retrySessionKeyValidateButton.setVisible(true);
-        }
     }
-
 }
 
 void SignalbashAudioProcessorEditor::resized()
 {
 
-    auto area = getLocalBounds();
-    flushButton.setBounds(area.removeFromBottom(40).reduced(10));
-
-    area.removeFromTop(30 + 110); area.removeFromLeft(20); area.removeFromRight(20);
-    sessionKeyLabel.setBounds(area.removeFromTop(20));
-    sessionKeyEditor.setBounds(area.removeFromTop(20));
-    area.removeFromTop(5);
-    submitSessionKeyButton.setBounds(area.removeFromTop(20));
-
-    editSessionKeyCancelButton.setBounds(area.removeFromBottom(20));
-
-    animationActiveToggle.setBounds(area.removeFromTop(20));
-
-    retrySessionKeyValidateButton.setBounds(getLocalBounds().removeFromBottom(40).reduced(10));
-
+    updateUIForCurrentView();
     DBG("resized() called");
-
 }
 
 void SignalbashAudioProcessorEditor::timerCallback()
 {
-
     if (audioProcessor.enableAnimation.load() && audioProcessor.signalHot.load()) {
         rotationAngle += 2.0f;
         if (rotationAngle >= 360.0f) {
             rotationAngle -= 360.0f;
         }
     }
+    updateUIForCurrentView();
     repaint();
 }
 
@@ -318,6 +248,7 @@ void SignalbashAudioProcessorEditor::buttonClicked (juce::Button* button)
             viewSessionKeyEnter = false;
             viewDefault = true;
             viewSettings = false;
+            updateUIForCurrentView();
         }
         else {
             juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon, "Error", "Session Key cannot be empty");
@@ -348,16 +279,17 @@ void SignalbashAudioProcessorEditor::buttonClicked (juce::Button* button)
         if (audioProcessor.isCurrentSessionKeyValidated()) {
             sessionKeyEditor.clear();
         }
-
         viewSessionKeyEnter = true;
         viewDefault = false;
         viewSettings = false;
+        updateUIForCurrentView();
     }
 
     if (button == &editSessionKeyCancelButton) {
         viewSessionKeyEnter = false;
         viewDefault = false;
         viewSettings = true;
+        updateUIForCurrentView();
     }
 
     if (button == &retrySessionKeyValidateButton) {
@@ -366,7 +298,6 @@ void SignalbashAudioProcessorEditor::buttonClicked (juce::Button* button)
 }
 
 void SignalbashAudioProcessorEditor::mouseDown (const juce::MouseEvent &event) {
-
     DBG ("Clicked at: " << event.getPosition().toString());
 
     if (spinnerBounds.contains(event.position)) {
@@ -374,7 +305,6 @@ void SignalbashAudioProcessorEditor::mouseDown (const juce::MouseEvent &event) {
     }
 
     if (settingsCogBounds.contains(event.position)) {
-
         if (event.mods.isShiftDown()) {
             DBG("SHIFT KEY IS DOWN DURING EVENT");
         }
@@ -400,21 +330,96 @@ void SignalbashAudioProcessorEditor::mouseDown (const juce::MouseEvent &event) {
         } else {
 
         }
+        updateUIForCurrentView();
     }
 }
 
 void SignalbashAudioProcessorEditor::mouseMove (const juce::MouseEvent &event) {
-
     if (settingsCogBounds.contains(event.position)) {
         settingsCogHovered = true;
     } else {
         settingsCogHovered = false;
     }
-
 }
 
-juce::String SignalbashAudioProcessorEditor::getObfuscatedSessionKey () {
+void SignalbashAudioProcessorEditor::updateUIForCurrentView()
+{
+    if (viewSessionKeyEnter)
+    {
+        sessionKeyLabel.setVisible(true);
+        sessionKeyEditor.setVisible(true);
+        submitSessionKeyButton.setVisible(true);
+        editSessionKeyCancelButton.setVisible(!audioProcessor.sessionKey.isEmpty());
 
+        auto area = getLocalBounds();
+        area.removeFromTop(30 + 110);
+        area.removeFromLeft(20);
+        area.removeFromRight(20);
+        sessionKeyLabel.setBounds(area.removeFromTop(20));
+        sessionKeyEditor.setBounds(area.removeFromTop(20));
+        area.removeFromTop(5);
+        submitSessionKeyButton.setBounds(area.removeFromTop(20));
+        editSessionKeyCancelButton.setBounds(getLocalBounds().removeFromBottom(40).reduced(10));
+
+        flushButton.setVisible(false);
+        copySessionKeyButton.setVisible(false);
+        changeSessionKeyButton.setVisible(false);
+        animationActiveToggle.setVisible(false);
+        retrySessionKeyValidateButton.setVisible(false);
+    }
+    else if (viewSettings)
+    {
+        flushButton.setVisible(settingsDebugMode);
+        copySessionKeyButton.setVisible(true);
+        changeSessionKeyButton.setVisible(true);
+        animationActiveToggle.setVisible(true);
+
+        auto bounds = getLocalBounds();
+        bounds.removeFromTop(40);
+        bounds.removeFromLeft(40);
+        bounds.removeFromRight(40);
+        bounds.removeFromTop(30);
+        bounds.removeFromTop(5);
+        bounds.removeFromTop(20);
+        if (settingsDebugMode) {
+            bounds.removeFromTop(20);
+            bounds.removeFromTop(20);
+        }
+        bounds.removeFromTop(20);
+        auto sessKeyBounds = bounds.removeFromTop(20);
+        copySessionKeyButton.setBounds(sessKeyBounds.removeFromLeft(sessKeyBounds.getWidth() / 2));
+        changeSessionKeyButton.setBounds(sessKeyBounds);
+        bounds.removeFromTop(40);
+        animationActiveToggle.setBounds(bounds.removeFromTop(20));
+        flushButton.setBounds(getLocalBounds().removeFromBottom(40).reduced(10));
+
+        sessionKeyLabel.setVisible(false);
+        sessionKeyEditor.setVisible(false);
+        submitSessionKeyButton.setVisible(false);
+        editSessionKeyCancelButton.setVisible(false);
+        retrySessionKeyValidateButton.setVisible(false);
+    }
+    else if (viewDefault)
+    {
+        bool showRetry = (!audioProcessor.connectionHealthy.load() && !audioProcessor.sessionKeyValidated.load()) ||
+                         (!audioProcessor.currentSessionKeyInvalid.load() && !audioProcessor.sessionKeyValidated.load() && audioProcessor.sessionKey.isEmpty());
+        retrySessionKeyValidateButton.setVisible(showRetry);
+
+        retrySessionKeyValidateButton.setBounds(getLocalBounds().removeFromBottom(40).reduced(10));
+
+        flushButton.setVisible(false);
+        sessionKeyLabel.setVisible(false);
+        sessionKeyEditor.setVisible(false);
+        submitSessionKeyButton.setVisible(false);
+        copySessionKeyButton.setVisible(false);
+        changeSessionKeyButton.setVisible(false);
+        editSessionKeyCancelButton.setVisible(false);
+        animationActiveToggle.setVisible(false);
+    }
+}
+
+juce::String SignalbashAudioProcessorEditor::getObfuscatedSessionKey ()
+{
     auto sessionKey = audioProcessor.sessionKey;
 
     if (sessionKey.length() <= 8)
