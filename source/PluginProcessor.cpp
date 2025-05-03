@@ -1,10 +1,3 @@
-/*
-  ==============================================================================
-
-    This file contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
 #include <string>
 #include <cmath>
 #include <ctime>
@@ -83,7 +76,6 @@ SignalbashAudioProcessor::SignalbashAudioProcessor()
 
 SignalbashAudioProcessor::~SignalbashAudioProcessor()
 {
-
     threadPool.removeAllJobs(true, 100);
     stopTimer();
 
@@ -233,7 +225,7 @@ void SignalbashAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
     }
 
     if (bypassParam != nullptr && bypassParam->get()) {
-        signalHot = false;
+        signalHot.store(false);
         lastProcessBlockCallTimestamp = juce::Time::currentTimeMillis();
         return;
     }
@@ -257,12 +249,12 @@ void SignalbashAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
     }
 
     if (hasNonZeroData) {
-        signalHot = true;
+        signalHot.store(true);
         ++activity;
         auto chunkDurationMilliseconds = numSamples / getSampleRate() * 1000;
         currentRecordedActivityMilliseconds += static_cast<int>(chunkDurationMilliseconds);
     } else {
-        signalHot = false;
+        signalHot.store(false);
     }
     lastProcessBlockCallTimestamp = juce::Time::currentTimeMillis();
 }
@@ -327,8 +319,8 @@ void SignalbashAudioProcessor::timerCallback () {
         }
     }
 
-    if (signalHot && activityWindowTimer.getCurrentBlockTimestamp() - currentActivityBlock > 1) {
-        signalHot = false;
+    if (signalHot.load() && activityWindowTimer.getCurrentBlockTimestamp() - currentActivityBlock > 1) {
+        signalHot.store(false);
     }
 
 }
@@ -377,15 +369,15 @@ void SignalbashAudioProcessor::checkConnectionHealth ()
 
             if (response.status == 200) {
                 DBG("/ping => Connection Healthy");
-                connectionHealthy = true;
+                connectionHealthy.store(true);
                 break;
             }
             else if (response.result.getErrorMessage() == "No internet connection") {
-                connectionHealthy = false;
+                connectionHealthy.store(false);
                 DBG("No internet detected.");
             }
             else if (response.result.getErrorMessage() == "Server is offline or unreachable") {
-                connectionHealthy = false;
+                connectionHealthy.store(false);
                 DBG("Server is temporarily offline or unreachable");
             }
 
@@ -396,7 +388,7 @@ void SignalbashAudioProcessor::checkConnectionHealth ()
     threadPool.addJob(new BackgroundJob(requestTask), true);
 }
 
-void SignalbashAudioProcessor::commitActivity (bool immediateSubmit = false)
+void SignalbashAudioProcessor::commitActivity (bool immediateSubmit)
 {
     if (sessionKey.isEmpty()) {
         DBG("Session key is not set, cannot submit activity");
@@ -477,19 +469,19 @@ void SignalbashAudioProcessor::commitActivity (bool immediateSubmit = false)
                 const juce::ScopedLock lock(mutex);
                 lastSuccessfullySubmittedBlock = mostRecentBlock;
                 activity.exchange(0);
-                connectionHealthy = true;
+                connectionHealthy.store(true);
                 return;
             }
             else if (response.status == 429) {
                 DBG("429 - Rate Limited. Will retry next pass.");
-                connectionHealthy = true;
+                connectionHealthy.store(true);
 
                 juce::Thread::sleep(currAttempt * currAttempt * 1000);
                 currAttempt += 1;
             }
             else if (response.status == 0) {
                 DBG("Internet connection down or Server Offline");
-                connectionHealthy = false;
+                connectionHealthy.store(false);
                 juce::Thread::sleep(currAttempt * currAttempt * 1000);
                 currAttempt += 1;
             }
@@ -517,7 +509,7 @@ void SignalbashAudioProcessor::validateSessionKey ()
         return;
     }
 
-    if (sessionKeyValidated) {
+    if (sessionKeyValidated.load()) {
         DBG("Session Key Validated. Nothing to do.");
         return;
     }
@@ -545,25 +537,25 @@ void SignalbashAudioProcessor::validateSessionKey ()
         if (response.status == 200)
         {
             DBG("Session Key Validated!");
-            currentSessionKeyInvalid = false;
-            sessionKeyValidated = true;
+            currentSessionKeyInvalid.store(false);
+            sessionKeyValidated.store(true);
             saveValidSessionKeyState();
-            connectionHealthy = true;
+            connectionHealthy.store(true);
         }
         if (response.status == 404) {
             DBG("Unknown Session Key");
-            currentSessionKeyInvalid = true;
-            sessionKeyValidated = false;
-            connectionHealthy = true;
+            currentSessionKeyInvalid.store(true);
+            sessionKeyValidated.store(false);
+            connectionHealthy.store(true);
         }
         if (response.status == 429)
         {
             DBG("429 - Rate Limited. Will retry next pass.");
-            connectionHealthy = true;
+            connectionHealthy.store(true);
         }
         if (response.status == 0) {
             DBG("No Internet or Server Offline");
-            connectionHealthy = false;
+            connectionHealthy.store(false);
             checkConnectionHealth();
         }
     };
@@ -576,8 +568,8 @@ void SignalbashAudioProcessor::loadSessionKeyFromFile()
         sessionKey = propertiesFile->getValue("sessionKey", "");
         DBG("Loaded Session Key From File: " << sessionKey);
 
-        enableAnimation = propertiesFile->getBoolValue("animationEnabled", true);
-        if (enableAnimation) {
+        enableAnimation.store(propertiesFile->getBoolValue("animationEnabled", true));
+        if (enableAnimation.load()) {
             DBG("Loaded Pref => Animation Enabled: ON");
         } else {
             DBG("Loaded Pref => Animation Enabled: OFF");
@@ -585,7 +577,7 @@ void SignalbashAudioProcessor::loadSessionKeyFromFile()
 
         if (!sessionKey.isEmpty()) {
             auto sessionKeyValidatedKey = sessionKey.toUpperCase() + "_validity";
-            sessionKeyValidated = propertiesFile->getBoolValue(sessionKeyValidatedKey);
+            sessionKeyValidated.store(propertiesFile->getBoolValue(sessionKeyValidatedKey));
         }
     }
 }
@@ -614,36 +606,38 @@ void SignalbashAudioProcessor::setSessionKey(const juce::String& newSessionKey)
 
     auto sessionKeyValidatedKey = sessionKey.toUpperCase() + "_validity";
     if (propertiesFile != nullptr && !propertiesFile->getBoolValue(sessionKeyValidatedKey)) {
-        sessionKeyValidated = false;
+        sessionKeyValidated.store(false);
         validateSessionKey();
     } else {
-        currentSessionKeyInvalid = false;
-        sessionKeyValidated = true;
+        currentSessionKeyInvalid.store(false);
+        sessionKeyValidated.store(true);
     }
 }
 
-bool SignalbashAudioProcessor::isCurrentSessionKeyValidated () {
-
+bool SignalbashAudioProcessor::isCurrentSessionKeyValidated ()
+{
     if (sessionKey.isEmpty()) {
         return false;
     }
 
-    if (currentSessionKeyInvalid) {
+    if (currentSessionKeyInvalid.load()) {
         return true;
     }
 
-    return sessionKeyValidated;
+    return sessionKeyValidated.load();
 }
 
-void SignalbashAudioProcessor::toggleAnimationEnabled (bool state) {
-    enableAnimation = state;
+void SignalbashAudioProcessor::toggleAnimationEnabled (bool state)
+{
+    enableAnimation.store(state);
     if (propertiesFile != nullptr) {
         propertiesFile->setValue("animationEnabled", state);
         propertiesFile->saveIfNeeded();
     }
 }
 
-std::string SignalbashAudioProcessor::generateDedupID() {
+std::string SignalbashAudioProcessor::generateDedupID()
+{
     static unsigned int seed = static_cast<unsigned int>(std::time(nullptr));
     std::string result;
     result.reserve(8);
@@ -655,4 +649,3 @@ std::string SignalbashAudioProcessor::generateDedupID() {
     }
     return result;
 }
-

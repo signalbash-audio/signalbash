@@ -1,11 +1,3 @@
-/*
-  ==============================================================================
-
-    This file contains the basic framework code for a JUCE plugin editor.
-
-  ==============================================================================
-*/
-
 #include <string>
 
 #include "PluginProcessor.h"
@@ -38,7 +30,8 @@ SignalbashAudioProcessorEditor::SignalbashAudioProcessorEditor (SignalbashAudioP
     sessionKeyLabel.setText("Enter Session Key:", juce::dontSendNotification);
 
     addAndMakeVisible(sessionKeyEditor);
-    sessionKeyEditor.setPasswordCharacter((juce::juce_wchar) 0x2022);
+
+    sessionKeyEditor.setPasswordCharacter('*');
     sessionKeyEditor.setJustification(juce::Justification::centred);
     sessionKeyEditor.setTextToShowWhenEmpty("Session Key", juce::Colours::grey);
     sessionKeyEditor.setColour(juce::TextEditor::backgroundColourId, juce::Colour(buttonFillColor));
@@ -49,7 +42,7 @@ SignalbashAudioProcessorEditor::SignalbashAudioProcessorEditor (SignalbashAudioP
     submitSessionKeyButton.setColour(juce::TextButton::buttonColourId, juce::Colour(buttonFillColor));
 
     addAndMakeVisible(animationActiveToggle);
-    animationActiveToggle.setToggleState(audioProcessor.enableAnimation, juce::dontSendNotification);
+    animationActiveToggle.setToggleState(audioProcessor.enableAnimation.load(), juce::dontSendNotification);
     animationActiveToggle.setButtonText("Enable Animation");
     animationActiveToggle.addListener(this);
 
@@ -103,20 +96,18 @@ void SignalbashAudioProcessorEditor::paint (juce::Graphics& g)
         g.setColour(juce::Colours::orange);
         statusBarMessage = "Session Key Missing";
     }
-    if (!audioProcessor.sessionKey.isEmpty() && audioProcessor.connectionHealthy) {
-
+    if (!audioProcessor.sessionKey.isEmpty() && audioProcessor.connectionHealthy.load()) {
         g.setColour(juce::Colour(0xFF00E676));
         statusBarMessage = "Connection Healthy";
     }
-    if (!audioProcessor.sessionKey.isEmpty() && !audioProcessor.connectionHealthy) {
+    if (!audioProcessor.sessionKey.isEmpty() && !audioProcessor.connectionHealthy.load()) {
         g.setColour(juce::Colours::red);
         statusBarMessage = "Offline (No Internet or Server Maintenance In Progress)";
     }
-    if (!audioProcessor.sessionKey.isEmpty() && audioProcessor.currentSessionKeyInvalid) {
+    if (!audioProcessor.sessionKey.isEmpty() && audioProcessor.currentSessionKeyInvalid.load()) {
         g.setColour(juce::Colours::red);
         statusBarMessage = "Invalid Session Key";
     }
-
     g.drawEllipse(12, 7, 16, 16, 1);
     g.fillEllipse(15, 10, 10, 10);
 
@@ -252,7 +243,7 @@ void SignalbashAudioProcessorEditor::paint (juce::Graphics& g)
 
         transform = juce::AffineTransform::translation(-halfWidth, -halfHeight);
 
-        if (audioProcessor.enableAnimation) {
+        if (audioProcessor.enableAnimation.load()) {
             transform = transform.rotated(juce::degreesToRadians(rotationAngle));
         }
 
@@ -261,12 +252,12 @@ void SignalbashAudioProcessorEditor::paint (juce::Graphics& g)
         g.drawImageTransformed(rotatingImage, transform, false);
 
         if (
-            (!audioProcessor.connectionHealthy && !audioProcessor.sessionKeyValidated) ||
-            (!audioProcessor.currentSessionKeyInvalid && !audioProcessor.sessionKeyValidated && audioProcessor.sessionKey.isEmpty())
+            (!audioProcessor.connectionHealthy.load() && !audioProcessor.sessionKeyValidated.load()) ||
+            (!audioProcessor.currentSessionKeyInvalid.load() && !audioProcessor.sessionKeyValidated.load() && audioProcessor.sessionKey.isEmpty())
             ) {
             retrySessionKeyValidateButton.setVisible(true);
         }
-        if (!audioProcessor.currentSessionKeyInvalid && !audioProcessor.sessionKeyValidated) {
+        if (!audioProcessor.currentSessionKeyInvalid.load() && !audioProcessor.sessionKeyValidated.load()) {
             retrySessionKeyValidateButton.setVisible(true);
         }
     }
@@ -298,7 +289,7 @@ void SignalbashAudioProcessorEditor::resized()
 void SignalbashAudioProcessorEditor::timerCallback()
 {
 
-    if (audioProcessor.enableAnimation && audioProcessor.signalHot) {
+    if (audioProcessor.enableAnimation.load() && audioProcessor.signalHot.load()) {
         rotationAngle += 2.0f;
         if (rotationAngle >= 360.0f) {
             rotationAngle -= 360.0f;

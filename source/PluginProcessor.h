@@ -1,15 +1,8 @@
-/*
-  ==============================================================================
-
-    This file contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <cstdint>
 #include <unordered_map>
+#include <atomic>
 #include <JuceHeader.h>
 #include "CurrentElapsedTimeProgress.h"
 
@@ -70,7 +63,7 @@ public:
     int64_t currentActivityBlock;
     int64_t currentSubmissionBlock;
 
-    bool signalHot = false;
+    std::atomic<bool> signalHot{false};
 
     int currentRecordedActivityMilliseconds;
 
@@ -98,18 +91,18 @@ public:
     std::string generateDedupID();
     std::string deduplicationID;
 
-    bool connectionHealthy = true;
+    std::atomic<bool> connectionHealthy{true};
     void checkConnectionHealth();
 
     juce::CriticalSection mutex;
     juce::ThreadPool threadPool;
 
     juce::String sessionKey;
-    bool enableAnimation = true;
+    std::atomic<bool> enableAnimation{true};
     std::unique_ptr<juce::PropertiesFile> propertiesFile;
 
-    bool sessionKeyValidated = false;
-    bool currentSessionKeyInvalid = false;
+    std::atomic<bool> sessionKeyValidated{false};
+    std::atomic<bool> currentSessionKeyInvalid{false};
     void validateSessionKey();
     void saveValidSessionKeyState();
     bool isCurrentSessionKeyValidated ();
