@@ -358,29 +358,41 @@ void SignalbashAudioProcessor::checkConnectionHealth ()
 {
     auto targetEndpoint = apiBase + "/ping";
 
-    std::function<void()> requestTask = [this, targetEndpoint]()
+    auto weakThis = juce::WeakReference<SignalbashAudioProcessor>(this);
+    std::function<void()> requestTask = [weakThis, targetEndpoint]()
     {
+        if (weakThis == nullptr) return;
+
         int maxAttempts = 5;
         int currAttempt = 1;
         while (currAttempt <= maxAttempts) {
+            if (weakThis == nullptr) break;
+
             RestRequest request;
             request.header("Content-Type", "application/json");
             RestRequest::Response response = request.get(targetEndpoint).execute();
 
             if (response.status == 200) {
-                DBG("/ping => Connection Healthy");
-                connectionHealthy.store(true);
+                if (auto* proc = weakThis.get()) {
+                    DBG("/ping => Connection Healthy");
+                    proc->connectionHealthy.store(true);
+                }
                 break;
             }
             else if (response.result.getErrorMessage() == "No internet connection") {
-                connectionHealthy.store(false);
-                DBG("No internet detected.");
+                if (auto* proc = weakThis.get()) {
+                    proc->connectionHealthy.store(false);
+                    DBG("No internet detected.");
+                }
             }
             else if (response.result.getErrorMessage() == "Server is offline or unreachable") {
-                connectionHealthy.store(false);
-                DBG("Server is temporarily offline or unreachable");
+                if (auto* proc = weakThis.get()) {
+                    proc->connectionHealthy.store(false);
+                    DBG("Server is temporarily offline or unreachable");
+                }
             }
 
+            if (weakThis == nullptr) break;
             juce::Thread::sleep(currAttempt * currAttempt * 1000);
             currAttempt += 1;
         }
@@ -429,8 +441,11 @@ void SignalbashAudioProcessor::commitActivity (bool immediateSubmit)
 
     auto endpoint = apiBase + "/submit";
 
-    std::function<void()> requestTask = [this, parameters, activityVals, mostRecentBlock, endpoint, immediateSubmit]()
+    auto weakThis = juce::WeakReference<SignalbashAudioProcessor>(this);
+
+    std::function<void()> requestTask = [weakThis, parameters, activityVals, mostRecentBlock, endpoint, immediateSubmit]()
     {
+        if (weakThis == nullptr) return;
 
         if (!immediateSubmit) {
 
@@ -440,15 +455,19 @@ void SignalbashAudioProcessor::commitActivity (bool immediateSubmit)
 
             int randomSleepTime = distr(gen);
             juce::Thread::sleep(randomSleepTime);
+            if (weakThis == nullptr) return;
         }
 
         int maxAttempts = 5;
         int currAttempt = 1;
 
         while (currAttempt <= maxAttempts) {
+            if (weakThis == nullptr) break;
 
-            if (activity == 0) {
-                return;
+            if (auto* proc = weakThis.get()) {
+                if (proc->activity == 0) {
+                    return;
+                }
             }
 
             RestRequest request;
@@ -465,23 +484,30 @@ void SignalbashAudioProcessor::commitActivity (bool immediateSubmit)
                 .execute();
 
             if (response.status == 200) {
-                DBG("Activity Data Submitted! Resetting");
-                const juce::ScopedLock lock(mutex);
-                lastSuccessfullySubmittedBlock = mostRecentBlock;
-                activity.exchange(0);
-                connectionHealthy.store(true);
+                if (auto* proc = weakThis.get()) {
+                    DBG("Activity Data Submitted! Resetting");
+                    const juce::ScopedLock lock(proc->mutex);
+                    proc->lastSuccessfullySubmittedBlock = mostRecentBlock;
+                    proc->activity.exchange(0);
+                    proc->connectionHealthy.store(true);
+                }
                 return;
             }
             else if (response.status == 429) {
-                DBG("429 - Rate Limited. Will retry next pass.");
-                connectionHealthy.store(true);
-
+                if (auto* proc = weakThis.get()) {
+                    DBG("429 - Rate Limited. Will retry next pass.");
+                    proc->connectionHealthy.store(true);
+                }
+                if (weakThis == nullptr) break;
                 juce::Thread::sleep(currAttempt * currAttempt * 1000);
                 currAttempt += 1;
             }
             else if (response.status == 0) {
-                DBG("Internet connection down or Server Offline");
-                connectionHealthy.store(false);
+                if (auto* proc = weakThis.get()) {
+                    DBG("Internet connection down or Server Offline");
+                    proc->connectionHealthy.store(false);
+                }
+                if (weakThis == nullptr) break;
                 juce::Thread::sleep(currAttempt * currAttempt * 1000);
                 currAttempt += 1;
             }
@@ -490,12 +516,15 @@ void SignalbashAudioProcessor::commitActivity (bool immediateSubmit)
                 DBG(response.result.getErrorMessage());
                 DBG("Status Code: " << response.status);
                 DBG("Generic Request Error. Sleeping, then retrying");
+                if (weakThis == nullptr) break;
                 juce::Thread::sleep(currAttempt * currAttempt * 1000);
                 currAttempt += 1;
             }
         }
 
-        checkConnectionHealth();
+        if (auto* proc = weakThis.get()) {
+            proc->checkConnectionHealth();
+        }
         DBG("Request Attempt Exhaustion.");
     };
 
@@ -521,8 +550,10 @@ void SignalbashAudioProcessor::validateSessionKey ()
 
     auto targetEndpoint = apiBase + "/validate-session-key";
 
-    std::function<void()> requestTask = [this, parameters, targetEndpoint]()
+    auto weakThis = juce::WeakReference<SignalbashAudioProcessor>(this);
+    std::function<void()> requestTask = [weakThis, parameters, targetEndpoint]()
     {
+        if (weakThis == nullptr) return;
 
         RestRequest request;
         request.header("Content-Type", "application/json");
@@ -536,27 +567,35 @@ void SignalbashAudioProcessor::validateSessionKey ()
 
         if (response.status == 200)
         {
-            DBG("Session Key Validated!");
-            currentSessionKeyInvalid.store(false);
-            sessionKeyValidated.store(true);
-            saveValidSessionKeyState();
-            connectionHealthy.store(true);
+            if (auto* proc = weakThis.get()) {
+                DBG("Session Key Validated!");
+                proc->currentSessionKeyInvalid.store(false);
+                proc->sessionKeyValidated.store(true);
+                proc->saveValidSessionKeyState();
+                proc->connectionHealthy.store(true);
+            }
         }
-        if (response.status == 404) {
-            DBG("Unknown Session Key");
-            currentSessionKeyInvalid.store(true);
-            sessionKeyValidated.store(false);
-            connectionHealthy.store(true);
+        else if (response.status == 404) {
+            if (auto* proc = weakThis.get()) {
+                DBG("Unknown Session Key");
+                proc->currentSessionKeyInvalid.store(true);
+                proc->sessionKeyValidated.store(false);
+                proc->connectionHealthy.store(true);
+            }
         }
-        if (response.status == 429)
+        else if (response.status == 429)
         {
-            DBG("429 - Rate Limited. Will retry next pass.");
-            connectionHealthy.store(true);
+            if (auto* proc = weakThis.get()) {
+                DBG("429 - Rate Limited. Will retry next pass.");
+                proc->connectionHealthy.store(true);
+            }
         }
-        if (response.status == 0) {
-            DBG("No Internet or Server Offline");
-            connectionHealthy.store(false);
-            checkConnectionHealth();
+        else if (response.status == 0) {
+            if (auto* proc = weakThis.get()) {
+                DBG("No Internet or Server Offline");
+                proc->connectionHealthy.store(false);
+                proc->checkConnectionHealth();
+            }
         }
     };
     threadPool.addJob(new BackgroundJob(requestTask), true);

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <unordered_map>
 #include <atomic>
+#include <memory>
 #include <JuceHeader.h>
 #include "CurrentElapsedTimeProgress.h"
 
@@ -120,6 +121,7 @@ public:
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SignalbashAudioProcessor)
+    JUCE_DECLARE_WEAK_REFERENCEABLE(SignalbashAudioProcessor)
 
     #if JUCE_ARM
     bool isARM = true;
