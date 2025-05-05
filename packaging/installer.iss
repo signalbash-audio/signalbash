@@ -1,4 +1,4 @@
-#define Version "1.0.0"
+#define Version "1.1.0"
 #define ProjectName "Signalbash"
 #define ProductName "Signalbash"
 #define Publisher "Signalbash"

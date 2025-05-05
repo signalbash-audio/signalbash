@@ -72,7 +72,7 @@ public:
 
     void timerCallback() override;
 
-    std::string _PLUGIN_VERSION = "1.0.0";
+    std::string _PLUGIN_VERSION = "1.1.0";
 
     bool hostNameInitialized = false;
     std::string hostName = "Unknown";

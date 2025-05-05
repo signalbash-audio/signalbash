@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version" FORCE)
 set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
 
-project(Signalbash VERSION 1.0.0)
+project(Signalbash VERSION 1.1.0)
 
 # Target JUCE
 add_subdirectory(libs/JUCE)

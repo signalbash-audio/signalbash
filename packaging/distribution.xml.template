@@ -17,14 +17,14 @@
     </choices-outline>
 
     <choice id="vst3" visible="true" start_selected="true" title="Signalbash VST3">
-        <pkg-ref id="com.signalbash.signalbash.vst3.pkg" version="1.0.0" onConclusion="none">signalbash.vst3.pkg</pkg-ref>
+        <pkg-ref id="com.signalbash.signalbash.vst3.pkg" version="1.1.0" onConclusion="none">signalbash.vst3.pkg</pkg-ref>
     </choice>
 
     <choice id="au" visible="true" start_selected="true" title="Signalbash AU">
-        <pkg-ref id="com.signalbash.signalbash.au.pkg" version="1.0.0" onConclusion="none">signalbash.au.pkg</pkg-ref>
+        <pkg-ref id="com.signalbash.signalbash.au.pkg" version="1.1.0" onConclusion="none">signalbash.au.pkg</pkg-ref>
     </choice>
 
     <choice id="clap" visible="true" start_selected="true" title="Signalbash CLAP">
-        <pkg-ref id="com.signalbash.signalbash.clap.pkg" version="1.0.0" onConclusion="none">signalbash.clap.pkg</pkg-ref>
+        <pkg-ref id="com.signalbash.signalbash.clap.pkg" version="1.1.0" onConclusion="none">signalbash.clap.pkg</pkg-ref>
     </choice>
 </installer-gui-script>
