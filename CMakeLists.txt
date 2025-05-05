@@ -9,7 +9,7 @@ set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
 project(Signalbash VERSION 1.0.0)
 
 # Target JUCE
-add_subdirectory(JUCE)
+add_subdirectory(libs/JUCE)
 # Target CLAP
 add_subdirectory(libs/clap-juce-extensions EXCLUDE_FROM_ALL)
 
