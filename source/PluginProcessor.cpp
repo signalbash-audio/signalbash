@@ -94,29 +94,17 @@ const juce::String SignalbashAudioProcessor::getName() const
 
 bool SignalbashAudioProcessor::acceptsMidi() const
 {
-   #if JucePlugin_WantsMidiInput
-    return true;
-   #else
     return false;
-   #endif
 }
 
 bool SignalbashAudioProcessor::producesMidi() const
 {
-   #if JucePlugin_ProducesMidiOutput
-    return true;
-   #else
     return false;
-   #endif
 }
 
 bool SignalbashAudioProcessor::isMidiEffect() const
 {
-   #if JucePlugin_IsMidiEffect
-    return true;
-   #else
     return false;
-   #endif
 }
 
 double SignalbashAudioProcessor::getTailLengthSeconds() const
@@ -292,6 +280,20 @@ void SignalbashAudioProcessor::parseHost () {
 
         uaheader = juce::String(hostName) + "/" + juce::String(hostVersion) + " - " + juce::SystemStats::getOperatingSystemName() + "/" + arch;
         #endif
+
+        if (hostName == "ProTools") {
+            hostNameDisplay = "Pro Tools";
+        } else if (hostName == "Live 12") {
+            hostNameDisplay = "Ableton Live 12";
+        } else if (hostName == "Live 13") {
+            hostNameDisplay = "Ableton Live 13";
+        } else if (hostName == "FruityLoops") {
+            hostNameDisplay = "FL Studio";
+        } else if (hostName == "Apple Logic") {
+            hostNameDisplay = "Logic Pro";
+        } else {
+            hostNameDisplay = hostName;
+        }
 
         hostNameInitialized = true;
     }

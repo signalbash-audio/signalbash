@@ -164,7 +164,7 @@ void SignalbashAudioProcessorEditor::paint (juce::Graphics& g)
                          );
         bounds.removeFromTop(5);
         g.setFont (juce::FontOptions (15.0f));
-        g.drawFittedText("Host: " + audioProcessor.hostName,
+        g.drawFittedText("Host: " + audioProcessor.hostNameDisplay,
                          bounds.removeFromTop(20),
                          juce::Justification::centredLeft, 1);
         if (settingsDebugMode) {
