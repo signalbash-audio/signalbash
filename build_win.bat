@@ -4,9 +4,7 @@ setlocal enabledelayedexpansion
 :: Detect logical processors
 set "NUM_CORES=%NUMBER_OF_PROCESSORS%"
 if not defined NUM_CORES (
-    for /f %%i in ('powershell -NoProfile -Command ^
-        "(Get-CimInstance -ClassName Win32_Processor).NumberOfLogicalProcessors"') ^
-        do set "NUM_CORES=%%i"
+    for /f %%i in ('powershell -NoProfile -Command "(Get-CimInstance -ClassName Win32_Processor).NumberOfLogicalProcessors"') do set "NUM_CORES=%%i"
 )
 echo Detected !NUM_CORES! logical processors for parallel building
 
