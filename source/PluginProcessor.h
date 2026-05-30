@@ -26,6 +26,8 @@ public:
    #endif
 
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    void processBlock (juce::AudioBuffer<double>&, juce::MidiBuffer&) override;
+    bool supportsDoublePrecisionProcessing() const override { return true; }
 
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
@@ -123,6 +125,9 @@ private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SignalbashAudioProcessor)
     JUCE_DECLARE_WEAK_REFERENCEABLE(SignalbashAudioProcessor)
+
+    template <typename SampleType>
+    void processBlockTyped (juce::AudioBuffer<SampleType>&, juce::MidiBuffer&);
 
     #if JUCE_ARM
     bool isARM = true;

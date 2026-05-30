@@ -168,8 +168,10 @@ bool SignalbashAudioProcessor::isBusesLayoutSupported (const BusesLayout& layout
 }
 #endif
 
-void SignalbashAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+template <typename SampleType>
+void SignalbashAudioProcessor::processBlockTyped (juce::AudioBuffer<SampleType>& buffer, juce::MidiBuffer& midiMessages)
 {
+    juce::ignoreUnused (midiMessages);
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
@@ -225,8 +227,8 @@ void SignalbashAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
         auto rmsMagnitude = buffer.getRMSLevel(channel, 0, numSamples);
 
         double db = -196.0;
-        if (rmsMagnitude > 0.0f) {
-            db = 20 * std::log10(rmsMagnitude);
+        if (rmsMagnitude > SampleType (0)) {
+            db = 20.0 * std::log10(static_cast<double>(rmsMagnitude));
         }
         if (db >= minDbThreshold) {
             hasNonZeroData = true;
@@ -245,6 +247,16 @@ void SignalbashAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
         signalHot.store(false);
     }
     lastProcessBlockCallTimestamp = juce::Time::currentTimeMillis();
+}
+
+void SignalbashAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+{
+    processBlockTyped (buffer, midiMessages);
+}
+
+void SignalbashAudioProcessor::processBlock (juce::AudioBuffer<double>& buffer, juce::MidiBuffer& midiMessages)
+{
+    processBlockTyped (buffer, midiMessages);
 }
 
 void SignalbashAudioProcessor::flushAccumulator () {
