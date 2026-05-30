@@ -1,22 +1,172 @@
+#include <cmath>
 #include <string>
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+SignalbashRotatingLogoComponent::SignalbashRotatingLogoComponent (SignalbashAudioProcessor& p)
+    : audioProcessor (p)
+{
+    setOpaque (true);
+    setInterceptsMouseClicks (false, false);
+}
+
+SignalbashRotatingLogoComponent::~SignalbashRotatingLogoComponent()
+{
+    stopTimer();
+}
+
+void SignalbashRotatingLogoComponent::setLogoImage (juce::Image image)
+{
+    logoImage = image;
+    repaint();
+}
+
+void SignalbashRotatingLogoComponent::setBackgroundColour (juce::Colour colour)
+{
+    backgroundColour = colour;
+    repaint();
+}
+
+void SignalbashRotatingLogoComponent::setActive (bool shouldBeActive)
+{
+    if (active == shouldBeActive)
+        return;
+
+    active = shouldBeActive;
+
+    if (active)
+        startTimerHz (60);
+    else
+        stopTimer();
+}
+
+void SignalbashRotatingLogoComponent::resetRotation()
+{
+    rotationAngle = 0.0f;
+    repaint();
+}
+
+int SignalbashRotatingLogoComponent::getRequiredSideLength() const
+{
+    if (! logoImage.isValid())
+        return 0;
+
+    const auto width = static_cast<double> (logoImage.getWidth());
+    const auto height = static_cast<double> (logoImage.getHeight());
+    return static_cast<int> (std::ceil (std::sqrt ((width * width) + (height * height))));
+}
+
+void SignalbashRotatingLogoComponent::paint (juce::Graphics& g)
+{
+    g.fillAll (backgroundColour);
+
+    if (! logoImage.isValid())
+        return;
+
+    const auto centerX = getWidth() / 2.0f;
+    const auto centerY = getHeight() / 2.0f;
+    const auto halfWidth = logoImage.getWidth() / 2.0f;
+    const auto halfHeight = logoImage.getHeight() / 2.0f;
+
+    auto transform = juce::AffineTransform::translation (-halfWidth, -halfHeight);
+
+    if (audioProcessor.enableAnimation.load())
+        transform = transform.rotated (juce::degreesToRadians (rotationAngle));
+
+    transform = transform.translated (centerX, centerY);
+
+    g.drawImageTransformed (logoImage, transform, false);
+}
+
+void SignalbashRotatingLogoComponent::timerCallback()
+{
+    if (audioProcessor.enableAnimation.load() && audioProcessor.signalHot.load())
+    {
+        rotationAngle += 2.0f;
+
+        if (rotationAngle >= 360.0f)
+            rotationAngle -= 360.0f;
+
+        repaint();
+    }
+}
+
+SignalbashSubmissionProgressBarComponent::SignalbashSubmissionProgressBarComponent (SignalbashAudioProcessor& p)
+    : audioProcessor (p)
+{
+    setOpaque (true);
+    setInterceptsMouseClicks (false, false);
+}
+
+SignalbashSubmissionProgressBarComponent::~SignalbashSubmissionProgressBarComponent()
+{
+    stopTimer();
+}
+
+void SignalbashSubmissionProgressBarComponent::setBackgroundColour (juce::Colour colour)
+{
+    backgroundColour = colour;
+    repaint();
+}
+
+void SignalbashSubmissionProgressBarComponent::setActive (bool shouldBeActive)
+{
+    if (active == shouldBeActive)
+        return;
+
+    active = shouldBeActive;
+
+    if (active)
+    {
+        startTimerHz (60);
+        repaint();
+    }
+    else
+    {
+        stopTimer();
+    }
+}
+
+void SignalbashSubmissionProgressBarComponent::paint (juce::Graphics& g)
+{
+    g.fillAll (backgroundColour);
+    g.setColour (juce::Colours::white);
+
+    const auto progress = getSmoothProgress();
+    g.fillRect (0.0f, 0.0f, static_cast<float> (getWidth() * progress / 100.0), static_cast<float> (getHeight()));
+}
+
+void SignalbashSubmissionProgressBarComponent::timerCallback()
+{
+    repaint();
+}
+
+double SignalbashSubmissionProgressBarComponent::getSmoothProgress() const
+{
+    const auto durationMs = static_cast<juce::int64> (audioProcessor.submissionAccumulatorWindow) * 1000;
+
+    if (durationMs <= 0)
+        return 0.0;
+
+    const auto elapsedMs = juce::Time::currentTimeMillis() % durationMs;
+    return 100.0 * static_cast<double> (elapsedMs) / static_cast<double> (durationMs);
+}
+
 //==============================================================================
 SignalbashAudioProcessorEditor::SignalbashAudioProcessorEditor (SignalbashAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p)
+    : AudioProcessorEditor (&p), audioProcessor (p), rotatingLogo (p), progressBar (p)
 {
 
     setSize (400, 300);
-    startTimerHz(60);
+    startTimerHz(2);
 
     splashLogoImage = juce::ImageCache::getFromMemory(BinaryData::signalbash_logo_text_990x624_png, BinaryData::signalbash_logo_text_990x624_pngSize);
 
     settingsCogImage = juce::ImageCache::getFromMemory(BinaryData::setting_cog_20px_png, BinaryData::setting_cog_20px_pngSize);
     settingsCogBounds = juce::Rectangle<float>(370, 5, 20, 20);
 
-    rotatingImage = juce::ImageCache::getFromMemory(BinaryData::signalbash_logo_100x_png, BinaryData::signalbash_logo_100x_pngSize);
+    rotatingLogo.setLogoImage(juce::ImageCache::getFromMemory(BinaryData::signalbash_logo_100x_png, BinaryData::signalbash_logo_100x_pngSize));
     spinnerBounds = juce::Rectangle<float>(
                                            30 + (370 - 100) / 2.0f,
                                            (300 - 100) / 2.0f,
@@ -25,6 +175,10 @@ SignalbashAudioProcessorEditor::SignalbashAudioProcessorEditor (SignalbashAudioP
 
     bgColor = juce::Colour(0xFF1D1F21);
     buttonFillColor = juce::Colour(0xFF222426);
+    rotatingLogo.setBackgroundColour(bgColor);
+    progressBar.setBackgroundColour(bgColor);
+    addChildComponent(rotatingLogo);
+    addChildComponent(progressBar);
 
     addAndMakeVisible(sessionKeyLabel);
     sessionKeyLabel.setText("Enter Session Key:", juce::dontSendNotification);
@@ -184,30 +338,8 @@ void SignalbashAudioProcessorEditor::paint (juce::Graphics& g)
                           bounds.removeFromTop(90),
                           juce::Justification::centredLeft, 1);
 
-        g.fillRect(0, 30,
-                   getWidth() * audioProcessor.submissionWindowTimer.getProgress() / 100,
-                   2);
     }
 
-    if (viewDefault) {
-        float centerX = getWidth() / 2.0f;
-        float centerY = 30 + (getHeight() - 30) / 2.0f;
-
-        float halfWidth = rotatingImage.getWidth() / 2.0f;
-        float halfHeight = rotatingImage.getHeight() / 2.0f;
-
-        juce::AffineTransform transform;
-
-        transform = juce::AffineTransform::translation(-halfWidth, -halfHeight);
-
-        if (audioProcessor.enableAnimation.load()) {
-            transform = transform.rotated(juce::degreesToRadians(rotationAngle));
-        }
-
-        transform = transform.translated(centerX, centerY);
-
-        g.drawImageTransformed(rotatingImage, transform, false);
-    }
 }
 
 void SignalbashAudioProcessorEditor::resized()
@@ -219,14 +351,13 @@ void SignalbashAudioProcessorEditor::resized()
 
 void SignalbashAudioProcessorEditor::timerCallback()
 {
-    if (audioProcessor.enableAnimation.load() && audioProcessor.signalHot.load()) {
-        rotationAngle += 2.0f;
-        if (rotationAngle >= 360.0f) {
-            rotationAngle -= 360.0f;
-        }
-    }
-    updateUIForCurrentView();
-    repaint();
+    repaint(0, 0, getWidth(), 30);
+
+    if (viewDefault && retrySessionKeyValidateButton.isVisible() != shouldShowRetryButton())
+        updateUIForCurrentView();
+
+    if (viewSettings && settingsDebugMode)
+        repaint(getSettingsDebugTextBounds());
 }
 
 void SignalbashAudioProcessorEditor::buttonClicked (juce::Button* button)
@@ -265,7 +396,7 @@ void SignalbashAudioProcessorEditor::buttonClicked (juce::Button* button)
         } else {
             DBG("Toggle Button Not Active");
             audioProcessor.toggleAnimationEnabled(false);
-            rotationAngle = 0.0f;
+            rotatingLogo.resetRotation();
         }
     }
 
@@ -302,7 +433,7 @@ void SignalbashAudioProcessorEditor::mouseDown (const juce::MouseEvent &event) {
     DBG ("Clicked at: " << event.getPosition().toString());
 
     if (spinnerBounds.contains(event.position)) {
-        rotationAngle = 0.0;
+        rotatingLogo.resetRotation();
     }
 
     if (settingsCogBounds.contains(event.position)) {
@@ -336,15 +467,30 @@ void SignalbashAudioProcessorEditor::mouseDown (const juce::MouseEvent &event) {
 }
 
 void SignalbashAudioProcessorEditor::mouseMove (const juce::MouseEvent &event) {
-    if (settingsCogBounds.contains(event.position)) {
-        settingsCogHovered = true;
-    } else {
-        settingsCogHovered = false;
+    const auto shouldHover = settingsCogBounds.contains(event.position);
+
+    if (settingsCogHovered != shouldHover)
+    {
+        settingsCogHovered = shouldHover;
+        repaint(settingsCogBounds.getSmallestIntegerContainer().expanded(2));
     }
 }
 
 void SignalbashAudioProcessorEditor::updateUIForCurrentView()
 {
+    const auto progressBounds = juce::Rectangle<int> (0, 30, getWidth(), 2);
+    progressBar.setBounds(progressBounds);
+    progressBar.setVisible(viewSettings);
+    progressBar.setActive(viewSettings);
+
+    const auto logoSide = juce::jmax(100, rotatingLogo.getRequiredSideLength());
+    auto logoBounds = juce::Rectangle<int> (logoSide, logoSide);
+    logoBounds.setCentre(juce::roundToInt(getWidth() / 2.0f),
+                         juce::roundToInt(30 + (getHeight() - 30) / 2.0f));
+    rotatingLogo.setBounds(logoBounds);
+    rotatingLogo.setVisible(viewDefault);
+    rotatingLogo.setActive(viewDefault);
+
     if (viewSessionKeyEnter)
     {
         sessionKeyLabel.setVisible(true);
@@ -402,8 +548,7 @@ void SignalbashAudioProcessorEditor::updateUIForCurrentView()
     }
     else if (viewDefault)
     {
-        bool showRetry = (!audioProcessor.connectionHealthy.load() && !audioProcessor.sessionKeyValidated.load()) ||
-                         (!audioProcessor.currentSessionKeyInvalid.load() && !audioProcessor.sessionKeyValidated.load() && audioProcessor.sessionKey.isEmpty());
+        bool showRetry = shouldShowRetryButton();
         retrySessionKeyValidateButton.setVisible(showRetry);
 
         retrySessionKeyValidateButton.setBounds(getLocalBounds().removeFromBottom(40).reduced(10));
@@ -417,6 +562,29 @@ void SignalbashAudioProcessorEditor::updateUIForCurrentView()
         editSessionKeyCancelButton.setVisible(false);
         animationActiveToggle.setVisible(false);
     }
+
+    repaint();
+}
+
+bool SignalbashAudioProcessorEditor::shouldShowRetryButton() const
+{
+    return (!audioProcessor.connectionHealthy.load() && !audioProcessor.sessionKeyValidated.load()) ||
+           (!audioProcessor.currentSessionKeyInvalid.load() && !audioProcessor.sessionKeyValidated.load() && audioProcessor.sessionKey.isEmpty());
+}
+
+juce::Rectangle<int> SignalbashAudioProcessorEditor::getSettingsDebugTextBounds() const
+{
+    if (!settingsDebugMode)
+        return {};
+
+    auto bounds = getLocalBounds();
+    bounds.removeFromTop(40);
+    bounds.removeFromLeft(40);
+    bounds.removeFromRight(40);
+    bounds.removeFromTop(30);
+    bounds.removeFromTop(5);
+    bounds.removeFromTop(20);
+    return bounds.removeFromTop(40);
 }
 
 juce::String SignalbashAudioProcessorEditor::getObfuscatedSessionKey ()
