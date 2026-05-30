@@ -117,9 +117,8 @@ public:
 
     RestRequest header (const juce::String& name, const juce::String& value)
     {
-        RestRequest req (*this);
         headers.set (name, value);
-        return req;
+        return *this;
     }
 
     const juce::URL& getURL() const

@@ -25,6 +25,23 @@ private:
     std::function<void()> task;
 };
 
+static juce::String getHostApplicationNameFromPath (const juce::String& hostPath)
+{
+    auto hostApplicationName = juce::String();
+
+    #if JUCE_MAC
+    auto bundlePath = hostPath.upToLastOccurrenceOf (".app", true, true);
+
+    if (bundlePath.isNotEmpty())
+        hostApplicationName = juce::File (bundlePath).getFileNameWithoutExtension();
+    #endif
+
+    if (hostApplicationName.isEmpty())
+        hostApplicationName = juce::File (hostPath).getFileNameWithoutExtension();
+
+    return hostApplicationName.removeCharacters ("\r\n");
+}
+
 //==============================================================================
 SignalbashAudioProcessor::SignalbashAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -272,11 +289,16 @@ void SignalbashAudioProcessor::parseHost () {
 
     if (!hostNameInitialized) {
         juce::PluginHostType type;
+        auto hostPath = type.getHostPath();
+        auto hostFilename = juce::File(hostPath).getFileName();
+        auto hostApplicationName = getHostApplicationNameFromPath (hostPath);
+
         hostName = type.getHostDescription();
 
+        if (type.type == juce::PluginHostType::UnknownHost && hostApplicationName.isNotEmpty())
+            hostAppName = hostApplicationName.toStdString();
+
         if (type.isAbletonLive()) {
-            auto hostPath = type.getHostPath();
-            auto hostFilename = juce::File(hostPath).getFileName();
             if (hostPath.containsIgnoreCase("Live 12") || hostFilename.containsIgnoreCase("Live 12")) {
                 hostName = "Live 12";
             }
@@ -286,7 +308,6 @@ void SignalbashAudioProcessor::parseHost () {
         }
 
         #if JUCE_WINDOWS
-
         auto hostVersion = juce::File::getSpecialLocation(juce::File::hostApplicationPath).getVersion();
         juce::String arch = isARM ? "arm64" : "x64";
 
@@ -440,6 +461,7 @@ void SignalbashAudioProcessor::commitActivity (bool immediateSubmit)
     parameters.set("version", _PLUGIN_VERSION);
     parameters.set("deduplication_id", deduplicationID);
     parameters.set("ua", uaheader);
+    parameters.set("host_app", hostAppName);
 
     DBG(parameters.getDescription());
 
@@ -485,9 +507,11 @@ void SignalbashAudioProcessor::commitActivity (bool immediateSubmit)
             }
 
             RestRequest request;
-            request.header("Content-Type", "application/json");
+            request = request.header("Content-Type", "application/json");
+            if (parameters["host_app"].isNotEmpty())
+                request = request.header("Host-App", parameters["host_app"]);
             #if JUCE_WINDOWS
-            request.header("User-Agent", parameters["ua"]);
+            request = request.header("User-Agent", parameters["ua"]);
             #endif
             RestRequest::Response response = request.post(endpoint)
                 .field("host", parameters["host"])
@@ -570,9 +594,9 @@ void SignalbashAudioProcessor::validateSessionKey ()
         if (weakThis == nullptr) return;
 
         RestRequest request;
-        request.header("Content-Type", "application/json");
+        request = request.header("Content-Type", "application/json");
         #if JUCE_WINDOWS
-        request.header("User-Agent", parameters["ua"]);
+        request = request.header("User-Agent", parameters["ua"]);
         #endif
         RestRequest::Response response = request.post(targetEndpoint)
             .field("plugin_version", parameters["version"])

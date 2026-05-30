@@ -79,6 +79,7 @@ public:
     bool hostNameInitialized = false;
     std::string hostName = "Unknown";
     std::string hostNameDisplay = "Unknown";
+    std::string hostAppName = "";
     void parseHost();
 
     #if JUCE_DEBUG
