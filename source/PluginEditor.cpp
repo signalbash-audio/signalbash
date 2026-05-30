@@ -35,6 +35,7 @@ SignalbashAudioProcessorEditor::SignalbashAudioProcessorEditor (SignalbashAudioP
     sessionKeyEditor.setJustification(juce::Justification::centred);
     sessionKeyEditor.setTextToShowWhenEmpty("Session Key", juce::Colours::grey);
     sessionKeyEditor.setColour(juce::TextEditor::backgroundColourId, juce::Colour(buttonFillColor));
+    sessionKeyEditor.onReturnKey = [this] { submitSessionKeyButton.triggerClick(); };
 
     addAndMakeVisible(submitSessionKeyButton);
     submitSessionKeyButton.setButtonText("Submit");
