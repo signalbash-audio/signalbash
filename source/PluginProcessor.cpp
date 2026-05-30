@@ -54,7 +54,10 @@ SignalbashAudioProcessor::SignalbashAudioProcessor()
                      #endif
                        )
 #endif
-, activityWindowTimer(10), submissionWindowTimer(120), threadPool(2)
+, activityWindowTimer(10)
+, submissionWindowTimer(120)
+, threadPool(2)
+, settingsFileLock("com.signalbash.settings")
 {
 
     activity = 0;
@@ -75,6 +78,8 @@ SignalbashAudioProcessor::SignalbashAudioProcessor()
     options.filenameSuffix      = "settings";
     options.folderName          = "Signalbash";
     options.osxLibrarySubFolder = "Application Support";
+    options.millisecondsBeforeSaving = 0;
+    options.processLock = &settingsFileLock;
 
     auto propertiesFileFile = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
                               .getChildFile(options.folderName)
@@ -642,6 +647,11 @@ void SignalbashAudioProcessor::validateSessionKey ()
 void SignalbashAudioProcessor::loadSessionKeyFromFile()
 {
     if (propertiesFile != nullptr) {
+        if (!propertiesFile->reload()) {
+            DBG("Failed to reload Session Key File");
+            return;
+        }
+
         sessionKey = propertiesFile->getValue("sessionKey", "");
         DBG("Loaded Session Key From File: " << sessionKey);
 
@@ -662,6 +672,18 @@ void SignalbashAudioProcessor::loadSessionKeyFromFile()
 void SignalbashAudioProcessor::saveSessionKeyToFile()
 {
     if (propertiesFile != nullptr) {
+        const juce::InterProcessLock::ScopedLockType lock(settingsFileLock);
+
+        if (!lock.isLocked()) {
+            DBG("Failed to lock Session Key File for writing");
+            return;
+        }
+
+        if (!propertiesFile->reload()) {
+            DBG("Failed to reload Session Key File before writing");
+            return;
+        }
+
         propertiesFile->setValue("sessionKey", sessionKey);
         propertiesFile->saveIfNeeded();
     }
@@ -670,6 +692,18 @@ void SignalbashAudioProcessor::saveSessionKeyToFile()
 void SignalbashAudioProcessor::saveValidSessionKeyState()
 {
     if (propertiesFile != nullptr) {
+        const juce::InterProcessLock::ScopedLockType lock(settingsFileLock);
+
+        if (!lock.isLocked()) {
+            DBG("Failed to lock Session Key Validity File for writing");
+            return;
+        }
+
+        if (!propertiesFile->reload()) {
+            DBG("Failed to reload Session Key Validity File before writing");
+            return;
+        }
+
         auto sessionKeyValidatedKey = sessionKey.toUpperCase() + "_validity";
         propertiesFile->setValue(sessionKeyValidatedKey, true);
         propertiesFile->saveIfNeeded();
@@ -708,6 +742,18 @@ void SignalbashAudioProcessor::toggleAnimationEnabled (bool state)
 {
     enableAnimation.store(state);
     if (propertiesFile != nullptr) {
+        const juce::InterProcessLock::ScopedLockType lock(settingsFileLock);
+
+        if (!lock.isLocked()) {
+            DBG("Failed to lock Preferences File for writing");
+            return;
+        }
+
+        if (!propertiesFile->reload()) {
+            DBG("Failed to reload Preferences File before writing");
+            return;
+        }
+
         propertiesFile->setValue("animationEnabled", state);
         propertiesFile->saveIfNeeded();
     }

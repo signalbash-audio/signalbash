@@ -104,6 +104,7 @@ public:
 
     juce::String sessionKey;
     std::atomic<bool> enableAnimation{true};
+    juce::InterProcessLock settingsFileLock;
     std::unique_ptr<juce::PropertiesFile> propertiesFile;
 
     std::atomic<bool> sessionKeyValidated{false};
